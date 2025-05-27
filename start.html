@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Messaggio per te</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 2em;
+      font-family: 'Georgia', serif;
+      background-color: #111;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    p {
+      font-size: 1.2em;
+      margin-bottom: 2em;
+    }
+    .link-box {
+      background-color: #222;
+      color: #ff69b4;
+      padding: 1em;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: all;
+      font-weight: bold;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <p>Copia il link cliccando qui e mandalo via mail o su whatsapp<br>
+  per aprirlo da computer (da telefono si vede male):</p>
+
+  <div class="link-box" onclick="copyLink()" id="linkBox">
+    https://spataa03.github.io/xEmma/
+  </div>
+
+  <script>
+    function copyLink() {
+      const text = document.getElementById("linkBox").innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Link copiato!");
+      });
+    }
+  </script>
+</body>
+</html>
