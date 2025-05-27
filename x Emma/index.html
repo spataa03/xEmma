@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Per Te</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background-color: #1c1c1c;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(255,255,255,0.05) 2%, transparent 3%),
+        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 2%, transparent 3%);
+      background-repeat: repeat;
+      background-size: 80px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Georgia', serif;
+      color: #eee;
+      overflow: hidden;
+      text-shadow: 0 0 10px #000;
+      position: relative;
+    }
+    video {
+      width: 90%;
+      max-width: 900px;
+      border-radius: 20px;
+      box-shadow: 0 0 40px rgba(255, 255, 255, 0.5);
+      background: rgba(0,0,0,0.6);
+      filter: grayscale(20%);
+      transition: opacity 1.5s ease;
+    }
+    #message {
+      position: absolute;
+      top: 20%;
+      width: 100%;
+      text-align: center;
+      font-size: 2em;
+      color: #ddd;
+      text-shadow: 2px 2px 5px #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.5s ease;
+      z-index: 30;
+    }
+    #message.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.9; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .pulse {
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+
+    /* --- Nuovo: schermata password --- */
+    #passwordScreen {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: #1c1c1c;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      text-align: center;
+      padding: 0 20px;
+    }
+    #passwordScreen h2 {
+      margin-bottom: 10px;
+    }
+    #passwordHint {
+      font-size: 1rem;
+      color: #ff85c1;
+      margin-bottom: 20px;
+      font-style: italic;
+      font-family: 'Georgia', serif;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    /* Wrapper per input + occhietto */
+    .password-wrapper {
+      position: relative;
+      width: 240px;
+      margin-bottom: 15px;
+    }
+
+    #passwordInput {
+      font-size: 1.2rem;
+      padding: 10px 45px 10px 15px; /* spazio a destra per occhietto */
+      border-radius: 8px;
+      border: none;
+      width: 100%;
+      text-align: center;
+      font-family: 'Georgia', serif;
+    }
+
+    #togglePassword {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      width: 25px;
+      height: 25px;
+      cursor: pointer;
+      fill: #ff69b4;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+    #togglePassword:hover {
+      opacity: 1;
+    }
+
+    #passwordScreen button {
+      font-size: 1.2rem;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      background-color: #ff69b4;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      font-family: 'Georgia', serif;
+      font-weight: bold;
+      width: 150px;
+    }
+    #passwordScreen button:hover {
+      background-color: #ff85c1;
+    }
+    #passwordError {
+      color: #ff6961;
+      font-weight: bold;
+      margin-top: 10px;
+      height: 20px;
+    }
+
+    /* Timer overlay */
+    #countdownOverlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background-color: rgba(28,28,28,0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Georgia', serif;
+      color: #ff69b4;
+      font-size: 3.5rem;
+      text-align: center;
+      z-index: 40;
+      user-select: none;
+    }
+    #countdownText {
+      font-size: 2rem;
+      margin-bottom: 15px;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    /* Ti amo container */
+    #tiAmoContainer {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Georgia', serif;
+      color: #ff385c;
+      font-size: 4rem;
+      text-shadow: 0 0 20px #ff3862, 0 0 40px #ff3862;
+      z-index: 25;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.5s ease;
+      user-select: none;
+    }
+
+    #tiAmoCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 24;
+    }
+  </style>
+</head>
+<body>
+  <!-- Schermata password -->
+  <div id="passwordScreen">
+    <h2>Inserisci la password per accedere</h2>
+    <div id="passwordHint">Indizio: è la nostra data (/)</div>
+    <div class="password-wrapper">
+      <input type="password" id="passwordInput" placeholder="Password" />
+      <svg id="togglePassword" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="Mostra/Nascondi password" role="button" tabindex="0">
+        <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+      </svg>
+    </div>
+    <button id="passwordBtn">Entra</button>
+    <div id="passwordError"></div>
+  </div>
+
+  <!-- Timer countdown -->
+  <div id="countdownOverlay" style="display:none;">
+    <div id="countdownText">Mettiti comoda...</div>
+    <div id="countdownNumber" style="font-size: 7rem; font-weight: bold;">3</div>
+  </div>
+
+  <canvas id="flowerCanvas"></canvas>
+
+  <video id="myVideo" controls muted>
+    <source src="xEmma.mp4" type="video/mp4" />
+    Il tuo browser non supporta la riproduzione del video.
+  </video>
+
+  <div id="message">
+    🌸 Il tuo sorriso è il più bello che abbia mai visto. Ti prego, non smettere mai di regalarlo al mondo. Sorridi. 🌸
+  </div>
+
+  <!-- Ti amo + cuori -->
+  <div id="tiAmoContainer">Ti amo</div>
+  <canvas id="tiAmoCanvas"></canvas>
+
+  <script>
+    const video = document.getElementById('myVideo');
+    const message = document.getElementById('message');
+    const canvas = document.getElementById("flowerCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const passwordScreen = document.getElementById('passwordScreen');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordBtn = document.getElementById('passwordBtn');
+    const passwordError = document.getElementById('passwordError');
+    const togglePassword = document.getElementById('togglePassword');
+
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    const countdownText = document.getElementById('countdownText');
+    const countdownNumber = document.getElementById('countdownNumber');
+
+    const tiAmoContainer = document.getElementById('tiAmoContainer');
+    const tiAmoCanvas = document.getElementById('tiAmoCanvas');
+    const tiAmoCtx = tiAmoCanvas.getContext('2d');
+
+    // Setup canvas dimension flower
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      tiAmoCanvas.width = window.innerWidth;
+      tiAmoCanvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // Nascondi contenuto finché non sblocchi
+    function showContent() {
+      passwordScreen.style.display = 'none';
+      countdownOverlay.style.display = 'flex';
+      canvas.style.display = 'none'; // non mostriamo il fiore subito
+      tiAmoCanvas.style.display = 'none';
+      tiAmoContainer.style.opacity = 0;
+      message.style.opacity = 0;
+      video.style.opacity = 1;
+      video.style.display = 'block';
+      video.muted = false;
+
+      // Countdown da 3 a 1, poi parte il video
+      let count = 3;
+      countdownNumber.textContent = count;
+      countdownText.textContent = 'Mettiti comoda...';
+
+      const countdownInterval = setInterval(() => {
+        count--;
+        if (count === 0) {
+          clearInterval(countdownInterval);
+          countdownOverlay.style.display = 'none';
+          video.play();
+        } else {
+          countdownNumber.textContent = count;
+        }
+      }, 1000);
+    }
+
+    // Gestione password
+    passwordBtn.addEventListener('click', () => {
+      const pass = passwordInput.value.trim();
+      if (pass === '18/11/2022') {
+        passwordError.textContent = '';
+        showContent();
+      } else {
+        passwordError.textContent = 'Questa pagina non è destinata a te.';
+        passwordInput.value = '';
+      }
+    });
+
+    // Toggle visibilità password
+    togglePassword.addEventListener('click', () => {
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        togglePassword.innerHTML = `<path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>`; // occhio aperto
+      } else {
+        togglePassword.innerHTML = `<path d="M2 12s3-7 10-7c3 0 5 1 7 3m0 8c-2 2-4 3-7 3-7 0-10-7-10-7m18 0l-2-2m-8 8l-4-4m8-8l4 4"/>`; // occhio chiuso
+        passwordInput.type = 'password';
+      }
+    });
+
+    // Funzione per animare il fiore
+    function drawFlowerAnimated() {
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const petalCount = 8;
+      const delay = 150;
+      let drawn = 0;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      function drawPetal(angleOffset) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angleOffset);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(80, 80, 0, 120);
+        ctx.quadraticCurveTo(-80, 80, 0, 0);
+        ctx.fillStyle = 'rgba(255, 182, 193, 0.6)';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawCenter() {
+        ctx.beginPath();
+        ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ff69b4";
+        ctx.fill();
+      }
+
+      function drawNextPetal() {
+        if (drawn < petalCount) {
+          const angle = (2 * Math.PI / petalCount) * drawn;
+          drawPetal(angle);
+          drawn++;
+          setTimeout(drawNextPetal, delay);
+        } else {
+          drawCenter();
+          canvas.classList.add('pulse');
+        }
+      }
+      drawNextPetal();
+    }
+
+    // Animazione cuori per "Ti amo"
+    class Heart {
+      constructor(x, y, size, speedX, speedY, opacity) {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.speedX = speedX;
+        this.speedY = speedY;
+        this.opacity = opacity;
+        this.life = 0;
+        this.maxLife = 120 + Math.random() * 60;
+      }
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(this.size, this.size);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(0, -3, -3, -3, -3, 0);
+        ctx.bezierCurveTo(-3, 3, 0, 6, 0, 8);
+        ctx.bezierCurveTo(0, 6, 3, 3, 3, 0);
+        ctx.bezierCurveTo(3, -3, 0, -3, 0, 0);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(255, 56, 92, ${this.opacity})`;
+        ctx.fill();
+        ctx.restore();
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.life++;
+        this.opacity -= 0.008;
+      }
+      isDead() {
+        return this.life > this.maxLife || this.opacity <= 0;
+      }
+    }
+
+    let hearts = [];
+    let heartAnimationId;
+
+    function animateHearts() {
+      tiAmoCtx.clearRect(0, 0, tiAmoCanvas.width, tiAmoCanvas.height);
+      for (let i = hearts.length - 1; i >= 0; i--) {
+        const h = hearts[i];
+        h.update();
+        h.draw(tiAmoCtx);
+        if (h.isDead()) {
+          hearts.splice(i, 1);
+        }
+      }
+      if (hearts.length < 20) {
+        const x = tiAmoCanvas.width / 2 + (Math.random() - 0.5) * 200;
+        const y = tiAmoCanvas.height / 2 + (Math.random() - 0.5) * 100;
+        const size = 0.7 + Math.random() * 0.5;
+        const speedX = (Math.random() - 0.5) * 0.5;
+        const speedY = -0.5 - Math.random();
+        hearts.push(new Heart(x, y, size, speedX, speedY, 0.9));
+      }
+      heartAnimationId = requestAnimationFrame(animateHearts);
+    }
+
+    // Gestione fine video: transizione a "Ti amo"
+    video.addEventListener('ended', () => {
+      // fade out video
+      video.style.transition = 'opacity 1.5s ease';
+      video.style.opacity = 0;
+
+      setTimeout(() => {
+        video.style.display = 'none';
+
+        // mostra ti amo
+        tiAmoContainer.style.pointerEvents = 'auto';
+        tiAmoContainer.style.opacity = 1;
+        tiAmoCanvas.style.display = 'block';
+
+        // avvia animazione cuori
+        animateHearts();
+
+        // Dopo 5 secondi mostra fiore e nascondi ti amo
+        setTimeout(() => {
+          // stop animazione cuori
+          cancelAnimationFrame(heartAnimationId);
+          hearts = [];
+          tiAmoCtx.clearRect(0, 0, tiAmoCanvas.width, tiAmoCanvas.height);
+          tiAmoCanvas.style.display = 'none';
+
+          tiAmoContainer.style.transition = 'opacity 1.5s ease';
+          tiAmoContainer.style.opacity = 0;
+          tiAmoContainer.style.pointerEvents = 'none';
+
+          // mostra canvas fiore
+          canvas.style.display = 'block';
+          drawFlowerAnimated();
+
+          // mostra messaggio con fade in
+          message.style.transition = 'opacity 2s ease';
+          message.style.opacity = 1;
+        }, 5000);
+      }, 1600);
+    });
+  </script>
+</body>
+</html>
